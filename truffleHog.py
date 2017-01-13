@@ -61,7 +61,7 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def find_strings(filename):
+def find_strings(filename,printonlymatching):
 	fp = open(filename,'r')
 
 	for line in fp:
@@ -82,14 +82,18 @@ def find_strings(filename):
                                     foundSomething = True
                                     printableDiff = printableDiff.replace(string, bcolors.WARNING + string + bcolors.ENDC)
 		if foundSomething:
-        		print(printableDiff)
+			if printonlymatching:
+				print(string)
+			else:
+        			print(printableDiff)
+			
                     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Find secrets hidden in the depths of a file')
     parser.add_argument('filename', type=str, help='filename')
-
+    parser.add_argument('printonlymatching', type=str, help='print only matching')
 
     args = parser.parse_args()
-    project_path = find_strings(args.filename)
+    project_path = find_strings(args.filename,args.printonlymatching)
     #shutil.rmtree(project_path, onerror=del_rw)
 

@@ -61,72 +61,35 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def find_strings(git_url):
-    project_path = tempfile.mkdtemp()
+def find_strings(filename):
+	fp = open(filename,'r')
 
-    Repo.clone_from(git_url, project_path)
-
-    repo = Repo(project_path)
-
-
-    already_searched = set()
-    for remote_branch in repo.remotes.origin.fetch():
-        branch_name = str(remote_branch).split('/')[1]
-        try:
-            repo.git.checkout(remote_branch, b=branch_name)
-        except:
-            pass
-     
-        prev_commit = None
-        for curr_commit in repo.iter_commits():
-            if not prev_commit:
-                pass
-            else:
-                #avoid searching the same diffs
-                hashes = str(prev_commit) + str(curr_commit)
-                if hashes in already_searched:
-                    prev_commit = curr_commit
-                    continue
-                already_searched.add(hashes)
-
-                diff = prev_commit.diff(curr_commit, create_patch=True)
-                for blob in diff:
-                    #print i.a_blob.data_stream.read()
-                    printableDiff = blob.diff.decode()
-                    if printableDiff.startswith("Binary files"):
-                        continue
-                    foundSomething = False
-                    lines = blob.diff.decode().split("\n")
-                    for line in lines:
-                        for word in line.split():
-                            base64_strings = get_strings_of_set(word, BASE64_CHARS)
-                            hex_strings = get_strings_of_set(word, HEX_CHARS)
-                            for string in base64_strings:
-                                b64Entropy = shannon_entropy(string, BASE64_CHARS)
+	for line in fp:
+		printableDiff = line
+		foundSomething = False
+		
+        	for word in line.split():
+                	base64_strings = get_strings_of_set(word, BASE64_CHARS)
+                        hex_strings = get_strings_of_set(word, HEX_CHARS)
+                        for string in base64_strings:
+                        	b64Entropy = shannon_entropy(string, BASE64_CHARS)
                                 if b64Entropy > 4.5:
                                     foundSomething = True
                                     printableDiff = printableDiff.replace(string, bcolors.WARNING + string + bcolors.ENDC)
-                            for string in hex_strings:
-                                hexEntropy = shannon_entropy(string, HEX_CHARS)
+                        for string in hex_strings:
+                        	hexEntropy = shannon_entropy(string, HEX_CHARS)
                                 if hexEntropy > 3:
                                     foundSomething = True
                                     printableDiff = printableDiff.replace(string, bcolors.WARNING + string + bcolors.ENDC)
-                    if foundSomething:
-                        commit_time =  datetime.datetime.fromtimestamp(prev_commit.committed_date).strftime('%Y-%m-%d %H:%M:%S')
-                        print(bcolors.OKGREEN + "Date: " + commit_time + bcolors.ENDC)
-                        print(bcolors.OKGREEN + "Branch: " + branch_name + bcolors.ENDC)
-                        print(bcolors.OKGREEN + "Commit: " + prev_commit.message + bcolors.ENDC)
-                        print(printableDiff)
+		if foundSomething:
+        		print(printableDiff)
                     
-            prev_commit = curr_commit
-    return project_path
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Find secrets hidden in the depths of git.')
-    parser.add_argument('git_url', type=str, help='URL for secret searching')
+    parser = argparse.ArgumentParser(description='Find secrets hidden in the depths of a file')
+    parser.add_argument('filename', type=str, help='filename')
 
 
     args = parser.parse_args()
-    project_path = find_strings(args.git_url)
-    shutil.rmtree(project_path, onerror=del_rw)
+    project_path = find_strings(args.filename)
+    #shutil.rmtree(project_path, onerror=del_rw)
 
